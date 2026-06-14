@@ -59,7 +59,7 @@ export default function Dashboard() {
         formData.append("image", fileFoto);
         
         // PASTIKAN API KEY IMGBB ANDA MASIH ADA DI SINI
-        const apiKeyImgBB = "MASUKKAN_KODE_API_IMGBB_ANDA_DISINI"; 
+        const apiKeyImgBB = "cc8bed1e0fd495258b6dd6cf78f7301a"; 
         
         const tanggapan = await fetch(`https://api.imgbb.com/1/upload?key=${apiKeyImgBB}`, {
           method: "POST",
