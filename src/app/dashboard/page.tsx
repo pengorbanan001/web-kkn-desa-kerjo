@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
+// FITUR BARU: Tambahkan 'query', 'where', 'getDocs' untuk pencarian presisi
+import { collection, addDoc, doc, setDoc, getDoc, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 
 export default function Dashboard() {
@@ -11,7 +12,6 @@ export default function Dashboard() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [menuAktif, setMenuAktif] = useState("jurnal"); 
   
-  // FITUR BARU: Menyimpan identitas user yang sedang login
   const [currentUserRole, setCurrentUserRole] = useState("");
   const [currentUserName, setCurrentUserName] = useState("");
 
@@ -22,13 +22,13 @@ export default function Dashboard() {
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [statusJurnal, setStatusJurnal] = useState("");
 
-  // State Profil Desa
+  // State Profil
   const [sejarah, setSejarah] = useState("");
   const [visiMisi, setVisiMisi] = useState("");
   const [potensi, setPotensi] = useState("");
   const [statusProfil, setStatusProfil] = useState("");
 
-  // State Manajemen Anggota (Hanya untuk Admin)
+  // State Anggota
   const [namaAnggota, setNamaAnggota] = useState("");
   const [emailAnggota, setEmailAnggota] = useState("");
   const [roleAnggota, setRoleAnggota] = useState("user");
@@ -40,13 +40,24 @@ export default function Dashboard() {
       if (!user) {
         router.push("/login");
       } else {
-        // Mengecek jabatan user di database
-        const userDoc = await getDoc(doc(db, "users", user.email || ""));
-        if (userDoc.exists()) {
-          setCurrentUserRole(userDoc.data().role);
-          setCurrentUserName(userDoc.data().nama);
-        } else {
-          setCurrentUserRole("user"); // Default jika tidak ditemukan
+        try {
+          // LOGIKA BARU ANTI-GAGAL: Mencari berdasarkan kolom 'email', bukan Document ID
+          const q = query(collection(db, "users"), where("email", "==", user.email));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            // Jika ketemu, ambil data dari hasil pencarian pertama
+            const userData = querySnapshot.docs[0].data();
+            setCurrentUserRole(userData.role);
+            setCurrentUserName(userData.nama);
+          } else {
+            // Jika tetap tidak ketemu
+            setCurrentUserRole("user"); 
+            setCurrentUserName(user.email || "Anggota");
+          }
+        } catch (error) {
+          console.error("Gagal memuat profil admin:", error);
+          setCurrentUserRole("user");
           setCurrentUserName(user.email || "Anggota");
         }
         setIsCheckingAuth(false);
@@ -98,7 +109,7 @@ export default function Dashboard() {
         kegiatan: isiKegiatan,
         tanggal: new Date(tanggal).toISOString(),
         gambar: linkGambar,
-        penulis: currentUserName // Menyimpan siapa yang menulis jurnal
+        penulis: currentUserName
       });
 
       setStatusJurnal("Kegiatan berhasil disimpan!");
@@ -125,18 +136,16 @@ export default function Dashboard() {
     }
   };
 
-  // FITUR BARU: Menyimpan data anggota baru ke Firestore
   const tambahAnggota = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusAnggota("Mendaftarkan anggota...");
     try {
-      // Menyimpan ke laci "users" dengan ID berupa email
       await setDoc(doc(db, "users", emailAnggota.toLowerCase()), {
         nama: namaAnggota,
         email: emailAnggota.toLowerCase(),
         role: roleAnggota,
         jurusan: jurusanAnggota,
-        foto: "", // Foto dikosongkan dulu, biar anggota yang edit sendiri nanti
+        foto: "", 
         terdaftarPada: new Date().toISOString()
       });
       setStatusAnggota("Anggota berhasil didaftarkan ke database!");
@@ -151,7 +160,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
-      {/* SIDEBAR DINAMIS */}
       <aside className="w-full md:w-64 bg-green-800 text-white p-6 flex flex-col shadow-xl z-10">
         <h2 className="text-2xl font-bold mb-2 text-center md:text-left">Ruang Kendali</h2>
         <p className="text-green-300 text-sm mb-6 text-center md:text-left">Halo, {currentUserName}</p>
@@ -159,12 +167,10 @@ export default function Dashboard() {
         <nav className="flex flex-row md:flex-col gap-2 md:gap-4 text-green-100 mb-4 md:mb-0 flex-wrap justify-center">
           <button onClick={() => setMenuAktif("jurnal")} className={`flex-1 md:w-full text-center md:text-left py-2 px-2 md:px-4 rounded text-sm md:text-base transition-all duration-300 ${menuAktif === "jurnal" ? "bg-green-600 font-bold text-white shadow-inner scale-105" : "hover:bg-green-700 hover:scale-105"}`}>Tulis Jurnal</button>
           
-          {/* Menu Edit Profil Desa hanya muncul untuk Admin & Bendahara (opsional) */}
           {(currentUserRole === "admin" || currentUserRole === "bendahara") && (
-            <button onClick={() => setMenuAktif("profil")} className={`flex-1 md:w-full text-center md:text-left py-2 px-2 md:px-4 rounded text-sm md:text-base transition-all duration-300 ${menuAktif === "profil" ? "bg-green-600 font-bold text-white shadow-inner scale-105" : "hover:bg-green-700 hover:scale-105"}`}>Edit Profil Desa</button>
+            <button onClick={() => setMenuAktif("profil")} className={`flex-1 md:w-full text-center md:text-left py-2 px-2 md:px-4 rounded text-sm md:text-base transition-all duration-300 ${menuAktif === "profil" ? "bg-green-600 font-bold text-white shadow-inner scale-105" : "hover:bg-green-700 hover:scale-105"}`}>Edit Profil</button>
           )}
 
-          {/* Menu Manajemen Anggota HANYA MUNCUL JIKA ADMIN */}
           {currentUserRole === "admin" && (
             <button onClick={() => setMenuAktif("anggota")} className={`flex-1 md:w-full text-center md:text-left py-2 px-2 md:px-4 rounded text-sm md:text-base transition-all duration-300 ${menuAktif === "anggota" ? "bg-green-600 font-bold text-white shadow-inner scale-105" : "hover:bg-green-700 hover:scale-105"}`}>Anggota KKN</button>
           )}
@@ -173,10 +179,7 @@ export default function Dashboard() {
         <button onClick={handleLogout} className="mt-auto w-full bg-red-600 py-2 rounded-lg font-bold hover:bg-red-700 transition-transform duration-300 hover:scale-105 text-sm md:text-base shadow-lg">Logout</button>
       </aside>
 
-      {/* KONTEN UTAMA */}
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
-        
-        {/* --- MENU JURNAL --- */}
         {menuAktif === "jurnal" && (
           <div className="bg-white p-4 md:p-6 rounded-xl shadow-md w-full max-w-2xl animate-fade-in">
             <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Buat Jurnal Baru</h3>
@@ -193,7 +196,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* --- MENU PROFIL DESA --- */}
         {menuAktif === "profil" && (
           <div className="bg-white p-4 md:p-6 rounded-xl shadow-md w-full max-w-3xl animate-fade-in">
              <h3 className="text-lg font-bold text-gray-800 mb-4">Ubah Teks Profil Desa</h3>
@@ -207,7 +209,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* --- MENU MANAJEMEN ANGGOTA --- */}
         {menuAktif === "anggota" && currentUserRole === "admin" && (
           <div className="bg-white p-4 md:p-6 rounded-xl shadow-md w-full max-w-2xl animate-fade-in">
             <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">Daftarkan Anggota Baru</h3>
