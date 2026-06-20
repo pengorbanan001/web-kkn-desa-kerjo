@@ -37,7 +37,7 @@ export default function Home() {
         <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-6 w-full md:w-auto">
           <Link href="/profil" className="bg-green-600 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:bg-green-700 hover:scale-105 shadow-lg hover:shadow-xl text-center">
             Lihat Profil Desa
-          </form>
+          </Link>
           <Link href="/jurnal" className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:bg-blue-700 hover:scale-105 shadow-lg hover:shadow-xl text-center">
             Baca Jurnal Kegiatan
           </Link>
