@@ -26,6 +26,10 @@ export default function Navbar() {
           <Link href="/profil" className={`transition-transform duration-300 hover:scale-110 ${isAktif("/profil") ? "font-extrabold text-yellow-300 underline decoration-2 underline-offset-4" : "text-gray-100 hover:text-white"}`}>
             Profil Desa
           </Link>
+
+          <Link href="/anggota" className={`transition-transform duration-300 hover:scale-110 ${isAktif("/anggota") ? "font-extrabold text-yellow-300 underline decoration-2 underline-offset-4" : "text-gray-100 hover:text-white"}`}>
+            Anggota KKN
+          </Link>
           
           <Link href="/login" className="bg-white text-green-700 px-4 py-2 rounded-full font-bold text-xs md:text-sm shadow-md transition-transform duration-300 hover:scale-110 hover:bg-green-50 hover:shadow-lg">
             Login Admin
